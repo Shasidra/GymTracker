@@ -1,0 +1,466 @@
+<html><head><base href="https://gymtracker-app.com/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GymTracker</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #007AFF;
+    }
+    .muscle-group {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .muscle-group h3 {
+      margin-top: 0;
+      color: #007AFF;
+    }
+    button {
+      background-color: #007AFF;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .delete-btn {
+      background-color: #FF3B30;
+    }
+    input[type="text"], input[type="number"], select {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    .progress-bar {
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      height: 20px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .progress {
+      background-color: #34C759;
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.3s ease-in-out;
+    }
+    .progress-extra {
+      background-color: #5856D6;
+      height: 100%;
+    }
+    .goal-reached {
+      background-color: #34C759;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    .extra-sets {
+      color: #5856D6;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .celebrate {
+      animation: celebrate 0.5s ease-in-out;
+    }
+    .settings {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .settings h2 {
+      margin-top: 0;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #007AFF;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    #languageSelect {
+      width: auto;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GymTracker</h1>
+    <select id="languageSelect" onchange="changeLanguage()">
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+      <option value="zh">中文</option>
+      <option value="es">Español</option>
+      <option value="ar">العربية</option>
+      <option value="ja">日本語</option>
+    </select>
+    <div id="muscle-groups"></div>
+    <button onclick="addMuscleGroup()" id="addGroupBtn">Ajouter un groupe musculaire</button>
+    <button onclick="resetAllCounts()" id="resetAllBtn">Réinitialiser toutes les séries</button>
+    <div class="settings">
+      <h2 id="settingsTitle">Paramètres</h2>
+      <label class="switch">
+        <input type="checkbox" id="autoResetToggle" onchange="toggleAutoReset()">
+        <span class="slider"></span>
+      </label>
+      <span id="autoResetLabel">Réinitialisation automatique (tous les 7 jours)</span>
+    </div>
+  </div>
+
+  <script>
+    let muscleGroups = [];
+    let autoResetEnabled = false;
+    let lastResetDate = new Date().toISOString().split('T')[0];
+    let currentLanguage = 'fr';
+
+    const translations = {
+      fr: {
+        title: "GymTracker",
+        addGroup: "Ajouter un groupe musculaire",
+        resetAll: "Réinitialiser toutes les séries",
+        settings: "Paramètres",
+        autoReset: "Réinitialisation automatique (tous les 7 jours)",
+        sets: "Séries",
+        editGoal: "Modifier l'objectif",
+        editName: "Modifier le nom",
+        delete: "Supprimer",
+        reset: "Réinitialiser",
+        goalReached: "Objectif atteint !",
+        enterMuscleGroup: "Nom du groupe musculaire:",
+        enterWeeklyGoal: "Objectif hebdomadaire pour {0} (nombre de séries):",
+        enterNewGoal: "Nouvel objectif hebdomadaire pour {0} (nombre de séries):",
+        enterNewName: "Nouveau nom pour le groupe musculaire:",
+        confirmDelete: "Êtes-vous sûr de vouloir supprimer ce groupe musculaire ?"
+      },
+      en: {
+        title: "GymTracker",
+        addGroup: "Add Muscle Group",
+        resetAll: "Reset All Sets",
+        settings: "Settings",
+        autoReset: "Automatic Reset (every 7 days)",
+        sets: "Sets",
+        editGoal: "Edit Goal",
+        editName: "Edit Name",
+        delete: "Delete",
+        reset: "Reset",
+        goalReached: "Goal Reached!",
+        enterMuscleGroup: "Muscle group name:",
+        enterWeeklyGoal: "Weekly goal for {0} (number of sets):",
+        enterNewGoal: "New weekly goal for {0} (number of sets):",
+        enterNewName: "New name for the muscle group:",
+        confirmDelete: "Are you sure you want to delete this muscle group?"
+      },
+      de: {
+        title: "GymTracker",
+        addGroup: "Muskelgruppe hinzufügen",
+        resetAll: "Alle Sätze zurücksetzen",
+        settings: "Einstellungen",
+        autoReset: "Automatisches Zurücksetzen (alle 7 Tage)",
+        sets: "Sätze",
+        editGoal: "Ziel bearbeiten",
+        editName: "Name bearbeiten",
+        delete: "Löschen",
+        reset: "Zurücksetzen",
+        goalReached: "Ziel erreicht!",
+        enterMuscleGroup: "Name der Muskelgruppe:",
+        enterWeeklyGoal: "Wochenziel für {0} (Anzahl der Sätze):",
+        enterNewGoal: "Neues Wochenziel für {0} (Anzahl der Sätze):",
+        enterNewName: "Neuer Name für die Muskelgruppe:",
+        confirmDelete: "Sind Sie sicher, dass Sie diese Muskelgruppe löschen möchten?"
+      },
+      zh: {
+        title: "健身追踪器",
+        addGroup: "添加肌肉群",
+        resetAll: "重置所有组数",
+        settings: "设置",
+        autoReset: "自动重置（每7天）",
+        sets: "组数",
+        editGoal: "编辑目标",
+        editName: "编辑名称",
+        delete: "删除",
+        reset: "重置",
+        goalReached: "目标达成！",
+        enterMuscleGroup: "肌肉群名称：",
+        enterWeeklyGoal: "{0}的每周目标（组数）：",
+        enterNewGoal: "{0}的新每周目标（组数）：",
+        enterNewName: "肌肉群的新名称：",
+        confirmDelete: "您确定要删除这个肌肉群吗？"
+      },
+      es: {
+        title: "GymTracker",
+        addGroup: "Añadir grupo muscular",
+        resetAll: "Reiniciar todas las series",
+        settings: "Configuración",
+        autoReset: "Reinicio automático (cada 7 días)",
+        sets: "Series",
+        editGoal: "Editar objetivo",
+        editName: "Editar nombre",
+        delete: "Eliminar",
+        reset: "Reiniciar",
+        goalReached: "¡Objetivo alcanzado!",
+        enterMuscleGroup: "Nombre del grupo muscular:",
+        enterWeeklyGoal: "Objetivo semanal para {0} (número de series):",
+        enterNewGoal: "Nuevo objetivo semanal para {0} (número de series):",
+        enterNewName: "Nuevo nombre para el grupo muscular:",
+        confirmDelete: "¿Está seguro de que desea eliminar este grupo muscular?"
+      },
+      ar: {
+        title: "تتبع التمارين",
+        addGroup: "إضافة مجموعة عضلية",
+        resetAll: "إعادة تعيين جميع المجموعات",
+        settings: "الإعدادات",
+        autoReset: "إعادة التعيين التلقائي (كل 7 أيام)",
+        sets: "مجموعات",
+        editGoal: "تعديل الهدف",
+        editName: "تعديل الاسم",
+        delete: "حذف",
+        reset: "إعادة تعيين",
+        goalReached: "تم تحقيق الهدف!",
+        enterMuscleGroup: "اسم المجموعة العضلية:",
+        enterWeeklyGoal: "الهدف الأسبوعي لـ {0} (عدد المجموعات):",
+        enterNewGoal: "الهدف الأسبوعي الجديد لـ {0} (عدد المجموعات):",
+        enterNewName: "الاسم الجديد للمجموعة العضلية:",
+        confirmDelete: "هل أنت متأكد أنك تريد حذف هذه المجموعة العضلية؟"
+      },
+      ja: {
+        title: "ジムトラッカー",
+        addGroup: "筋肉グループを追加",
+        resetAll: "全セットをリセット",
+        settings: "設定",
+        autoReset: "自動リセット（7日ごと）",
+        sets: "セット",
+        editGoal: "目標を編集",
+        editName: "名前を編集",
+        delete: "削除",
+        reset: "リセット",
+        goalReached: "目標達成！",
+        enterMuscleGroup: "筋肉グループ名：",
+        enterWeeklyGoal: "{0}の週間目標（セット数）：",
+        enterNewGoal: "{0}の新しい週間目標（セット数）：",
+        enterNewName: "筋肉グループの新しい名前：",
+        confirmDelete: "この筋肉グループを削除してもよろしいですか？"
+      }
+    };
+
+    function changeLanguage() {
+      currentLanguage = document.getElementById('languageSelect').value;
+      localStorage.setItem('language', currentLanguage);
+      updateUILanguage();
+    }
+
+    function updateUILanguage() {
+      document.title = translations[currentLanguage].title;
+      document.querySelector('h1').textContent = translations[currentLanguage].title;
+      document.getElementById('addGroupBtn').textContent = translations[currentLanguage].addGroup;
+      document.getElementById('resetAllBtn').textContent = translations[currentLanguage].resetAll;
+      document.getElementById('settingsTitle').textContent = translations[currentLanguage].settings;
+      document.getElementById('autoResetLabel').textContent = translations[currentLanguage].autoReset;
+      renderMuscleGroups();
+    }
+
+    function addMuscleGroup() {
+      const muscleGroupName = prompt(translations[currentLanguage].enterMuscleGroup);
+      if (muscleGroupName) {
+        const weeklyGoal = parseInt(prompt(translations[currentLanguage].enterWeeklyGoal.replace('{0}', muscleGroupName)));
+        const muscleGroup = { name: muscleGroupName, count: 0, weeklyGoal: weeklyGoal };
+        muscleGroups.push(muscleGroup);
+        saveMuscleGroups();
+        renderMuscleGroups();
+      }
+    }
+
+    function incrementCount(index) {
+      muscleGroups[index].count++;
+      if (muscleGroups[index].count === muscleGroups[index].weeklyGoal) {
+        celebrateGoalReached(index);
+      }
+      saveMuscleGroups();
+      renderMuscleGroups();
+    }
+
+    function decrementCount(index) {
+      if (muscleGroups[index].count > 0) {
+        muscleGroups[index].count--;
+        saveMuscleGroups();
+        renderMuscleGroups();
+      }
+    }
+
+    function editGoal(index) {
+      const newGoal = parseInt(prompt(translations[currentLanguage].enterNewGoal.replace('{0}', muscleGroups[index].name)));
+      if (!isNaN(newGoal)) {
+        muscleGroups[index].weeklyGoal = newGoal;
+        saveMuscleGroups();
+        renderMuscleGroups();
+      }
+    }
+
+    function editName(index) {
+      const newName = prompt(translations[currentLanguage].enterNewName, muscleGroups[index].name);
+      if (newName) {
+        muscleGroups[index].name = newName;
+        saveMuscleGroups();
+        renderMuscleGroups();
+      }
+    }
+
+    function deleteMuscleGroup(index) {
+      if (confirm(translations[currentLanguage].confirmDelete)) {
+        muscleGroups.splice(index, 1);
+        saveMuscleGroups();
+        renderMuscleGroups();
+      }
+    }
+
+    function celebrateGoalReached(index) {
+      const muscleGroupElement = document.querySelectorAll('.muscle-group')[index];
+      muscleGroupElement.classList.add('celebrate');
+      setTimeout(() => {
+        muscleGroupElement.classList.remove('celebrate');
+      }, 500);
+    }
+
+    function resetCount(index) {
+      muscleGroups[index].count = 0;
+      saveMuscleGroups();
+      renderMuscleGroups();
+    }
+
+    function resetAllCounts() {
+      muscleGroups.forEach(group => group.count = 0);
+      lastResetDate = new Date().toISOString().split('T')[0];
+      saveMuscleGroups();
+      renderMuscleGroups();
+    }
+
+    function toggleAutoReset() {
+      autoResetEnabled = document.getElementById('autoResetToggle').checked;
+      localStorage.setItem('autoResetEnabled', autoResetEnabled);
+    }
+
+    function checkAutoReset() {
+      const today = new Date().toISOString().split('T')[0];
+      const daysSinceReset = (new Date(today) - new Date(lastResetDate)) / (1000 * 60 * 60 * 24);
+      if (autoResetEnabled && daysSinceReset >= 7) {
+        resetAllCounts();
+      }
+    }
+
+    function saveMuscleGroups() {
+      localStorage.setItem('muscleGroups', JSON.stringify(muscleGroups));
+      localStorage.setItem('lastResetDate', lastResetDate);
+    }
+
+    function loadMuscleGroups() {
+      const savedMuscleGroups = localStorage.getItem('muscleGroups');
+      if (savedMuscleGroups) {
+        muscleGroups = JSON.parse(savedMuscleGroups);
+      }
+      lastResetDate = localStorage.getItem('lastResetDate') || new Date().toISOString().split('T')[0];
+      autoResetEnabled = localStorage.getItem('autoResetEnabled') === 'true';
+      document.getElementById('autoResetToggle').checked = autoResetEnabled;
+      currentLanguage = localStorage.getItem('language') || 'fr';
+      document.getElementById('languageSelect').value = currentLanguage;
+    }
+
+    function renderMuscleGroups() {
+      const muscleGroupsContainer = document.getElementById('muscle-groups');
+      muscleGroupsContainer.innerHTML = '';
+      muscleGroups.forEach((muscleGroup, index) => {
+        const muscleGroupElement = document.createElement('div');
+        muscleGroupElement.className = 'muscle-group';
+        const progress = Math.min((muscleGroup.count / muscleGroup.weeklyGoal) * 100, 100);
+        const extraProgress = Math.max(((muscleGroup.count - muscleGroup.weeklyGoal) / muscleGroup.weeklyGoal) * 100, 0);
+        const goalReached = muscleGroup.count >= muscleGroup.weeklyGoal;
+        const extraSets = Math.max(muscleGroup.count - muscleGroup.weeklyGoal, 0);
+        muscleGroupElement.innerHTML = `
+          <h3>${muscleGroup.name}</h3>
+          <p>${translations[currentLanguage].sets}: ${muscleGroup.count} / ${muscleGroup.weeklyGoal}
+             ${extraSets > 0 ? `<span class="extra-sets">(+${extraSets})</span>` : ''}
+          </p>
+          <div class="progress-bar">
+            <div class="progress" style="width: ${progress}%;"></div>
+            ${extraProgress > 0 ? `<div class="progress-extra" style="width: ${extraProgress}%;"></div>` : ''}
+          </div>
+          <button onclick="decrementCount(${index})">-</button>
+          <button onclick="incrementCount(${index})">+</button>
+          <button onclick="editGoal(${index})">${translations[currentLanguage].editGoal}</button>
+          <button onclick="editName(${index})">${translations[currentLanguage].editName}</button>
+          <button onclick="resetCount(${index})">${translations[currentLanguage].reset}</button>
+          <button class="delete-btn" onclick="deleteMuscleGroup(${index})">${translations[currentLanguage].delete}</button>
+          ${goalReached ? `<div class="goal-reached">${translations[currentLanguage].goalReached}</div>` : ''}
+        `;
+        muscleGroupsContainer.appendChild(muscleGroupElement);
+      });
+    }
+
+    // Initial load and render
+    loadMuscleGroups();
+    updateUILanguage();
+
+    // Check for auto reset every day
+    setInterval(checkAutoReset, 24 * 60 * 60 * 1000);
+  </script>
+</body></html>
